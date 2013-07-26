@@ -269,6 +269,7 @@ config ARCH_MSM8226
 	select PINCTRL_MSM_TLMM_V3
 	select ENABLE_VMALLOC_SAVINGS
 	select MSM_IRQ
+	select HAS_MACH_MEMUTILS
 
 config ARCH_MSMSAMARIUM
 	bool "MSMSAMARIUM"
@@ -1820,5 +1821,11 @@ config INTELLI_HOTPLUG
 	help
 	  An intelligent cpu hotplug driver for
 	  Low Latency Frequency Transition capable processors.
+
+config HAS_MACH_MEMUTILS
+	default n
+	bool "Motorola MSM memcpy enhancements"
+	help
+	Faster memcpy performance for Krait
 
 endif
