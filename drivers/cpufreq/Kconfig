@@ -175,6 +175,11 @@ config CPU_FREQ_DEFAULT_GOV_BLUACTIVE
 	select CPU_FREQ_GOV_BLUACTIVE
 	help
 	Use the CPUFreq governor 'bluactive' as default.
+config CPU_FREQ_DEFAULT_GOV_ALUCARD
+  bool "alucard"
+  select CPU_FREQ_GOV_ALUCARD
+  help
+
 
 config CPU_FREQ_DEFAULT_GOV_PEGASUSQ
 	bool "pegasusq"
