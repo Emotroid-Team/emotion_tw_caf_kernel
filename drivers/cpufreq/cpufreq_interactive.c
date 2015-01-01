@@ -128,6 +128,8 @@ static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
 static bool io_is_busy;
 
+#define DOWN_LOW_LOAD_THRESHOLD 5
+
 /*
  * If the max load among other CPUs is higher than up_threshold_any_cpu_load
  * and if the highest frequency among the other CPUs is higher than
@@ -391,6 +393,8 @@ static void cpufreq_interactive_timer(unsigned long data)
 			if (new_freq < hispeed_freq)
 				new_freq = hispeed_freq;
 		}
+	} else if (cpu_load <= DOWN_LOW_LOAD_THRESHOLD) {
+		new_freq = pcpu->policy->cpuinfo.min_freq;
 	} else {
 		new_freq = choose_freq(pcpu, loadadjfreq);
 
