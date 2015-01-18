@@ -154,3 +154,4 @@ obj-$(CONFIG_GSM_MODEM_SPRD6500) += board-sprd6500-spi.o board-sprd6500-modems.o
 
 obj-$(CONFIG_INTELLI_HOTPLUG) += intelli_hotplug.o
 obj-$(CONFIG_MSM_HOTPLUG) += msm_hotplug.o
+obj-$(CONFIG_MSM_CPUFREQ_LIMIT) += cpufreq_limit.o

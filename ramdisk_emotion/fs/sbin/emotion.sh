@@ -5,6 +5,8 @@ export PATH
 
 BBX=/system/xbin/busybox
 
+sleep 60
+
 # Inicio
 mount -o remount,rw -t auto /
 mount -o remount,rw -t auto /system
@@ -125,6 +127,8 @@ echo "2649600" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
 echo "1" > /sys/kernel/dyn_fsync/Dyn_fsync_active
 echo "200000000" > /sys/class/kgsl/kgsl-3d0/devfreq/min_freq
 echo "600000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
+echo "0:1190400 1:1190400 2:1190400 3:1190400" > /sys/module/cpu_boost/parameters/input_boost_freq
+echo "500" > /sys/module/cpu_boost/parameters/input_boost_ms
 
 sync
 
