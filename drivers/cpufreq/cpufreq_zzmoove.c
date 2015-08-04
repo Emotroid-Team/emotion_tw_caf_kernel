@@ -2902,7 +2902,12 @@ static ssize_t store_sampling_down_momentum_sensitivity(struct kobject *a, struc
 static ssize_t store_sampling_down_factor(struct kobject *a, struct attribute *b, const char *buf, size_t count)
 {
 	unsigned int input, j;
-	int ret;
+	int ret = 0;
+	int mpd = strcmp(current->comm, "mpdecision");
+
+	if (mpd == 0)
+		return ret;
+
 	ret = sscanf(buf, "%u", &input);
 
 	if (ret != 1 || input > MAX_SAMPLING_DOWN_FACTOR
@@ -7981,7 +7986,7 @@ static void zz_restartloop_work(struct work_struct *work)
 #endif /* ZZMOOVE_DEBUG */
 	cancel_delayed_work_sync(&dbs_info->work);
 	flush_workqueue(dbs_wq);
-	queue_delayed_work_on(cpu, dbs_wq, &dbs_info->work, 0);
+	mod_delayed_work_on(cpu, dbs_wq, &dbs_info->work, 0);
 	work_restartloop_in_progress = false;
 }
 #endif /* ENABLE_WORK_RESTARTLOOP */
@@ -8393,7 +8398,7 @@ static void do_dbs_timer(struct work_struct *work)
 
 	dbs_check_cpu(dbs_info);
 
-	queue_delayed_work_on(cpu, dbs_wq, &dbs_info->work, delay);
+	mod_delayed_work_on(cpu, dbs_wq, &dbs_info->work, delay);
 
 	mutex_unlock(&dbs_info->timer_mutex);
 }
@@ -8414,7 +8419,7 @@ static inline void dbs_timer_init(struct cpu_dbs_info_s *dbs_info)
 #else
 	INIT_DELAYED_WORK_DEFERRABLE(&dbs_info->work, do_dbs_timer);
 #endif /* LINUX_VERSION_CODE... */
-	queue_delayed_work_on(dbs_info->cpu, dbs_wq, &dbs_info->work, delay);
+	mod_delayed_work_on(dbs_info->cpu, dbs_wq, &dbs_info->work, delay);
 }
 
 static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info)
@@ -8913,14 +8918,8 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		}
 
 		mutex_lock(&this_dbs_info->timer_mutex);
-		    if (policy->max < this_dbs_info->cur_policy->cur)
-			__cpufreq_driver_target(
-					this_dbs_info->cur_policy,
-					policy->max, CPUFREQ_RELATION_H);
-		    else if (policy->min > this_dbs_info->cur_policy->cur)
-			__cpufreq_driver_target(
-					this_dbs_info->cur_policy,
-					policy->min, CPUFREQ_RELATION_L);
+		    __cpufreq_driver_target(this_dbs_info->cur_policy,
+				policy->cur, CPUFREQ_RELATION_L);
 		dbs_check_cpu(this_dbs_info);
 		mutex_unlock(&this_dbs_info->timer_mutex);
 
