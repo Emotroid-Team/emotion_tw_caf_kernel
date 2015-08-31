@@ -30,8 +30,12 @@ int handle_page_fault(unsigned long address, unsigned long ip,
 	pmd_t *pmd;
 	pte_t *pte;
 	int err = -EFAULT;
+<<<<<<< HEAD
 	unsigned int flags = FAULT_FLAG_ALLOW_RETRY | FAULT_FLAG_KILLABLE |
 				 (is_write ? FAULT_FLAG_WRITE : 0);
+=======
+	unsigned int flags = FAULT_FLAG_ALLOW_RETRY | FAULT_FLAG_KILLABLE;
+>>>>>>> 38217cd... Update Linux 3.10.76
 
 	*code_out = SEGV_MAPERR;
 
@@ -42,6 +46,11 @@ int handle_page_fault(unsigned long address, unsigned long ip,
 	if (in_atomic())
 		goto out_nosemaphore;
 
+<<<<<<< HEAD
+=======
+	if (is_user)
+		flags |= FAULT_FLAG_USER;
+>>>>>>> 38217cd... Update Linux 3.10.76
 retry:
 	down_read(&mm->mmap_sem);
 	vma = find_vma(mm, address);
@@ -58,12 +67,24 @@ retry:
 
 good_area:
 	*code_out = SEGV_ACCERR;
+<<<<<<< HEAD
 	if (is_write && !(vma->vm_flags & VM_WRITE))
 		goto out;
 
 	/* Don't require VM_READ|VM_EXEC for write faults! */
 	if (!is_write && !(vma->vm_flags & (VM_READ | VM_EXEC)))
 		goto out;
+=======
+	if (is_write) {
+		if (!(vma->vm_flags & VM_WRITE))
+			goto out;
+		flags |= FAULT_FLAG_WRITE;
+	} else {
+		/* Don't require VM_READ|VM_EXEC for write faults! */
+		if (!(vma->vm_flags & (VM_READ | VM_EXEC)))
+			goto out;
+	}
+>>>>>>> 38217cd... Update Linux 3.10.76
 
 	do {
 		int fault;
@@ -76,6 +97,11 @@ good_area:
 		if (unlikely(fault & VM_FAULT_ERROR)) {
 			if (fault & VM_FAULT_OOM) {
 				goto out_of_memory;
+<<<<<<< HEAD
+=======
+			} else if (fault & VM_FAULT_SIGSEGV) {
+				goto out;
+>>>>>>> 38217cd... Update Linux 3.10.76
 			} else if (fault & VM_FAULT_SIGBUS) {
 				err = -EACCES;
 				goto out;
@@ -124,6 +150,11 @@ out_of_memory:
 	 * (which will retry the fault, or kill us if we got oom-killed).
 	 */
 	up_read(&mm->mmap_sem);
+<<<<<<< HEAD
+=======
+	if (!is_user)
+		goto out_nosemaphore;
+>>>>>>> 38217cd... Update Linux 3.10.76
 	pagefault_out_of_memory();
 	return 0;
 }
