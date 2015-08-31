@@ -34,11 +34,18 @@ asmlinkage void do_page_fault(int datammu, unsigned long esr0, unsigned long ear
 	struct vm_area_struct *vma;
 	struct mm_struct *mm;
 	unsigned long _pme, lrai, lrad, fixup;
+<<<<<<< HEAD
+=======
+	unsigned long flags = 0;
+>>>>>>> d96947e... Update Linux 3.10.61
 	siginfo_t info;
 	pgd_t *pge;
 	pud_t *pue;
 	pte_t *pte;
+<<<<<<< HEAD
 	int write;
+=======
+>>>>>>> d96947e... Update Linux 3.10.61
 	int fault;
 
 #if 0
@@ -81,6 +88,12 @@ asmlinkage void do_page_fault(int datammu, unsigned long esr0, unsigned long ear
 	if (in_atomic() || !mm)
 		goto no_context;
 
+<<<<<<< HEAD
+=======
+	if (user_mode(__frame))
+		flags |= FAULT_FLAG_USER;
+
+>>>>>>> d96947e... Update Linux 3.10.61
 	down_read(&mm->mmap_sem);
 
 	vma = find_vma(mm, ear0);
@@ -129,7 +142,10 @@ asmlinkage void do_page_fault(int datammu, unsigned long esr0, unsigned long ear
  */
  good_area:
 	info.si_code = SEGV_ACCERR;
+<<<<<<< HEAD
 	write = 0;
+=======
+>>>>>>> d96947e... Update Linux 3.10.61
 	switch (esr0 & ESR0_ATXC) {
 	default:
 		/* handle write to write protected page */
@@ -140,7 +156,11 @@ asmlinkage void do_page_fault(int datammu, unsigned long esr0, unsigned long ear
 #endif
 		if (!(vma->vm_flags & VM_WRITE))
 			goto bad_area;
+<<<<<<< HEAD
 		write = 1;
+=======
+		flags |= FAULT_FLAG_WRITE;
+>>>>>>> d96947e... Update Linux 3.10.61
 		break;
 
 		 /* handle read from protected page */
@@ -162,7 +182,11 @@ asmlinkage void do_page_fault(int datammu, unsigned long esr0, unsigned long ear
 	 * make sure we exit gracefully rather than endlessly redo
 	 * the fault.
 	 */
+<<<<<<< HEAD
 	fault = handle_mm_fault(mm, vma, ear0, write ? FAULT_FLAG_WRITE : 0);
+=======
+	fault = handle_mm_fault(mm, vma, ear0, flags);
+>>>>>>> d96947e... Update Linux 3.10.61
 	if (unlikely(fault & VM_FAULT_ERROR)) {
 		if (fault & VM_FAULT_OOM)
 			goto out_of_memory;
