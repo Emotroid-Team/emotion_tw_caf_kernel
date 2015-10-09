@@ -61,11 +61,6 @@ echo  Kernel script is working !!! >> /data/emotiontest.log
 echo "excecuted on $(date +"%d-%m-%Y %r" )" >> /data/emotiontest.log
 echo  Done ! >> /data/emotiontest.log
 
-#FSTRIM
-$BBX fstrim -v /system >> /data/emotiontest.log
-$BBX fstrim -v /cache >> /data/emotiontest.log
-$BBX fstrim -v /data >> /data/emotiontest.log
-
 sync
 
 #SSWAP to 1.2gb
@@ -133,48 +128,9 @@ echo "600000000" > /sys/class/kgsl/kgsl-3d0/max_gpuclk
 
 sync
 
-# ipv6 disable
-echo "0" > /data/.emotionkernel/disable_ipv6
-
-#Set fauxsound defaults.
-echo "0" > /sys/kernel/sound_control_3/gpl_sound_control_locked
-echo "0 0" > /sys/kernel/sound_control_3/gpl_headphone_gain
-echo "0 0" > /sys/kernel/sound_control_3/gpl_speaker_gain
-echo "1" > /sys/kernel/sound_control_3/gpl_sound_control_locked
-
-#Voltage Control
-if [ ! -f /data/.emotionkernel/volt_prof ]; then
-	echo "0" > /data/.emotionkernel/volt_prof
-fi
-
-#KCal control
-if [ ! -f /data/.emotionkernel/kcal_sat ]; then
-	echo "32" > /data/.emotionkernel/kcal_sat
-	echo "128" > /data/.emotionkernel/kcal_cont
-	echo "128" > /data/.emotionkernel/kcal_val
-	echo "0" > /data/.emotionkernel/kcal_graychk
-fi
-
-#Synapse profile
-if [ ! -f /data/.emotionkernel/bck_prof ]; then
-	cp -f /res/synapse/files/bck_prof /data/.emotionkernel/bck_prof
-	cp -f /res/synapse/files/gammaplaciano_prof /data/.emotionkernel/gammaplaciano_prof
-	cp -f /res/synapse/files/gamma_prof /data/.emotionkernel/gamma_prof
-	cp -f /res/synapse/files/lmk_prof /data/.emotionkernel/lmk_prof
-	cp -f /res/synapse/files/mass_storage /data/.emotionkernel/mass_storage
-	cp -f /res/synapse/files/hotplug_prof /data/.emotionkernel/hotplug_prof
-	cp -f /res/synapse/files/wake_prof /data/.emotionkernel/wake_prof
-fi
-
 stop thermal-engine
 /system/xbin/busybox run-parts /system/etc/init.d
 start thermal-engine
-
-# Synapse
-mount -t rootfs -o remount,rw rootfs
-ln -fs /res/synapse/uci /sbin/uci
-/sbin/uci
-mount -t rootfs -o remount,ro rootfs
 
 sync
 
