@@ -359,7 +359,6 @@ static int boost_migration_notify(struct notifier_block *nb,
 	struct cpu_sync *s = &per_cpu(sync_info, mnd->dest_cpu);
 
 	if (suspended)
->>>>>>> 1d936f3... cpufreq: cpu-boost: Disable boost when suspended
 
 	if (load_based_syncs && (mnd->load <= migration_load_threshold))
 		return NOTIFY_OK;
