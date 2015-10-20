@@ -18,9 +18,8 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/kobject.h>
-#ifdef CONFIG_STATE_NOTIFIER
-#include <linux/state_notifier.h>
-#endif
+#include <linux/fb.h>
+#include <linux/notifier.h>
 #include <linux/cpufreq.h>
 
 #define INTELLI_PLUG			"intelli_plug"
@@ -37,6 +36,7 @@
 #define DEFAULT_MAX_CPUS_ONLINE		NR_CPUS
 #define DEFAULT_NR_FSHIFT		DEFAULT_MAX_CPUS_ONLINE - 1
 #define DEFAULT_DOWN_LOCK_DUR		2500
+#define DEFAULT_SUSPEND_DEFER_TIME	10
 #define DEFAULT_MAX_CPUS_ONLINE_SUSP	1
 
 #define CAPACITY_RESERVE		50
@@ -60,6 +60,9 @@ static u64 last_boost_time, last_input;
 static struct delayed_work intelli_plug_work;
 static struct work_struct up_down_work;
 static struct workqueue_struct *intelliplug_wq;
+static struct workqueue_struct *susp_wq;
+static struct delayed_work suspend_work;
+static struct work_struct resume_work;
 static struct mutex intelli_plug_mutex;
 static struct notifier_block notif;
 
@@ -77,6 +80,7 @@ static unsigned int full_mode_profile = 0;
 static unsigned int cpu_nr_run_threshold = CPU_NR_THRESHOLD;
 
 static bool hotplug_suspended = false;
+unsigned int suspend_defer_time = DEFAULT_SUSPEND_DEFER_TIME;
 static unsigned int min_cpus_online_res = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online_res = DEFAULT_MAX_CPUS_ONLINE;
 static unsigned int max_cpus_online_susp = DEFAULT_MAX_CPUS_ONLINE_SUSP;
@@ -243,7 +247,7 @@ static void __ref cpu_up_down_work(struct work_struct *work)
 		for_each_online_cpu(cpu) {
 			if (cpu == 0)
 				continue;
-			if (check_down_lock(cpu) || check_cpuboost(cpu))
+			if (check_down_lock(cpu))
 				break;
 			l_nr_threshold =
 				cpu_nr_run_threshold << 1 / (num_online_cpus());
@@ -280,9 +284,12 @@ static void intelli_plug_work_fn(struct work_struct *work)
 					msecs_to_jiffies(def_sampling_ms));
 }
 
-static void intelli_plug_suspend(void)
+static void intelli_plug_suspend(struct work_struct *work)
 {
 	int cpu = 0;
+
+	if (atomic_read(&intelli_plug_active) == 0)
+		return;
 
 	mutex_lock(&intelli_plug_mutex);
 	hotplug_suspended = true;
@@ -309,9 +316,12 @@ static void intelli_plug_suspend(void)
 	}
 }
 
-static void __ref intelli_plug_resume(void)
+static void __ref intelli_plug_resume(struct work_struct *work)
 {
 	int cpu, required_reschedule = 0, required_wakeup = 0;
+
+	if (atomic_read(&intelli_plug_active) == 0)
+		return;
 
 	if (hotplug_suspended) {
 		mutex_lock(&intelli_plug_mutex);
@@ -328,7 +338,7 @@ static void __ref intelli_plug_resume(void)
 		}
 	}
 
-	if (wakeup_boost || required_wakeup) {
+	if (required_wakeup) {
 		/* Fire up all CPUs */
 		for_each_cpu_not(cpu, cpu_online_mask) {
 			if (cpu == 0)
@@ -344,27 +354,45 @@ static void __ref intelli_plug_resume(void)
 				      msecs_to_jiffies(RESUME_SAMPLING_MS));
 }
 
-#ifdef CONFIG_STATE_NOTIFIER
-static int state_notifier_callback(struct notifier_block *this,
+static void __intelli_plug_suspend(void)
+{
+	INIT_DELAYED_WORK(&suspend_work, intelli_plug_suspend);
+	queue_delayed_work_on(0, susp_wq, &suspend_work, 
+				 msecs_to_jiffies(suspend_defer_time * 1000)); 
+}
+
+static void __intelli_plug_resume(void)
+{
+	flush_workqueue(susp_wq);
+	cancel_delayed_work_sync(&suspend_work);
+	queue_work_on(0, susp_wq, &resume_work);
+}
+
+static int fb_notifier_callback(struct notifier_block *self,
 				unsigned long event, void *data)
 {
-	if (atomic_read(&intelli_plug_active) == 0)
-		return NOTIFY_OK;
+	struct fb_event *evdata = data;
+	int *blank;
 
-	switch (event) {
-		case STATE_NOTIFIER_ACTIVE:
-			intelli_plug_resume();
-			break;
-		case STATE_NOTIFIER_SUSPEND:
-			intelli_plug_suspend();
-			break;
-		default:
-			break;
+	if (evdata && evdata->data && event == FB_EVENT_BLANK) {
+		blank = evdata->data;
+		switch (*blank) {
+			case FB_BLANK_UNBLANK:
+				//display on
+				__intelli_plug_resume();
+				break;
+			case FB_BLANK_POWERDOWN:
+			case FB_BLANK_HSYNC_SUSPEND:
+			case FB_BLANK_VSYNC_SUSPEND:
+			case FB_BLANK_NORMAL:
+				//display off
+				__intelli_plug_suspend();
+				break;
+		}
 	}
 
-	return NOTIFY_OK;
+	return 0;
 }
-#endif
 
 static void intelli_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
@@ -469,14 +497,16 @@ static int __ref intelli_plug_start(void)
 		goto err_out;
 	}
 
-#ifdef CONFIG_STATE_NOTIFIER
-	notif.notifier_call = state_notifier_callback;
-	if (state_register_client(&notif)) {
-		pr_err("%s: Failed to register State notifier callback\n",
-			INTELLI_PLUG);
-		goto err_dev;
+	susp_wq =
+	    alloc_workqueue("intelli_susp_wq", WQ_FREEZABLE, 0);
+	if (!susp_wq) {
+		pr_err("%s: Failed to allocate suspend workqueue\n",
+		       INTELLI_PLUG);
+		ret = -ENOMEM;
+		goto err_out;
 	}
-#endif
+
+	notif.notifier_call = fb_notifier_callback;
 
 	ret = input_register_handler(&intelli_plug_input_handler);
 	if (ret) {
@@ -493,6 +523,8 @@ static int __ref intelli_plug_start(void)
 		dl = &per_cpu(lock_info, cpu);
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
+	INIT_DELAYED_WORK(&suspend_work, intelli_plug_suspend);
+	INIT_WORK(&resume_work, intelli_plug_resume);
 
 	/* Fire up all CPUs */
 	for_each_cpu_not(cpu, cpu_online_mask) {
@@ -518,6 +550,10 @@ static void intelli_plug_stop(void)
 	int cpu;
 	struct down_lock *dl;
 
+	flush_workqueue(susp_wq);
+	cancel_work_sync(&resume_work);
+	cancel_delayed_work_sync(&suspend_work);
+
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		cancel_delayed_work_sync(&dl->lock_rem);
@@ -526,12 +562,10 @@ static void intelli_plug_stop(void)
 	cancel_work_sync(&up_down_work);
 	cancel_delayed_work_sync(&intelli_plug_work);
 	mutex_destroy(&intelli_plug_mutex);
-#ifdef CONFIG_STATE_NOTIFIER
-	state_unregister_client(&notif);
-#endif
 	notif.notifier_call = NULL;
 
 	input_unregister_handler(&intelli_plug_input_handler);
+	destroy_workqueue(susp_wq);
 	destroy_workqueue(intelliplug_wq);
 }
 
@@ -560,6 +594,7 @@ show_one(cpus_boosted, cpus_boosted);
 show_one(min_cpus_online, min_cpus_online);
 show_one(max_cpus_online, max_cpus_online);
 show_one(max_cpus_online_susp, max_cpus_online_susp);
+show_one(suspend_defer_time, suspend_defer_time);
 show_one(full_mode_profile, full_mode_profile);
 show_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 show_one(def_sampling_ms, def_sampling_ms);
@@ -587,6 +622,7 @@ static ssize_t store_##file_name		\
 }
 
 store_one(cpus_boosted, cpus_boosted);
+store_one(suspend_defer_time, suspend_defer_time);
 store_one(full_mode_profile, full_mode_profile);
 store_one(cpu_nr_run_threshold, cpu_nr_run_threshold);
 store_one(def_sampling_ms, def_sampling_ms);
@@ -713,6 +749,7 @@ KERNEL_ATTR_RW(cpus_boosted);
 KERNEL_ATTR_RW(min_cpus_online);
 KERNEL_ATTR_RW(max_cpus_online);
 KERNEL_ATTR_RW(max_cpus_online_susp);
+KERNEL_ATTR_RW(suspend_defer_time);
 KERNEL_ATTR_RW(full_mode_profile);
 KERNEL_ATTR_RW(cpu_nr_run_threshold);
 KERNEL_ATTR_RW(boost_lock_duration);
@@ -728,6 +765,7 @@ static struct attribute *intelli_plug_attrs[] = {
 	&min_cpus_online_attr.attr,
 	&max_cpus_online_attr.attr,
 	&max_cpus_online_susp_attr.attr,
+	&suspend_defer_time_attr.attr,
 	&full_mode_profile_attr.attr,
 	&cpu_nr_run_threshold_attr.attr,
 	&boost_lock_duration_attr.attr,
