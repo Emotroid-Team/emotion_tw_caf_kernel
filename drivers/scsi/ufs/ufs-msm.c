@@ -2045,7 +2045,7 @@ static int msm_ufs_hce_enable_notify(struct ufs_hba *hba, bool status)
 	struct msm_ufs_host *host = hba->priv;
 	int err = 0;
 
-	switch (status) {
+	switch ((int)status) {
 	case PRE_CHANGE:
 		msm_ufs_power_up_sequence(hba, UFS_PHY_INIT_FULL);
 		/*
@@ -2177,7 +2177,7 @@ static int msm_ufs_link_startup_notify(struct ufs_hba *hba, bool status)
 	unsigned long core_clk_rate = 0;
 	u32 core_clk_cycles_per_100ms;
 
-	switch (status) {
+	switch ((int)status) {
 	case PRE_CHANGE:
 		core_clk_rate = msm_ufs_cfg_timers(hba, UFS_PWM_G1,
 						   SLOWAUTO_MODE, 0);
@@ -2477,7 +2477,7 @@ static int msm_ufs_pwr_change_notify(struct ufs_hba *hba,
 		goto out;
 	}
 
-	switch (status) {
+	switch ((int)status) {
 	case PRE_CHANGE:
 		if (hba->quirks & UFSHCD_QUIRK_BROKEN_2_TX_LANES)
 			ufs_msm_cap.tx_lanes = 1;
