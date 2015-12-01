@@ -1,0 +1,48 @@
+From 98ae14c31eaff1276992ed4cd4b9fb3fb95b3b04 Mon Sep 17 00:00:00 2001
+From: Pafcholini <nadyaivanova14@gmail.com>
+Date: Tue, 1 Dec 2015 20:53:44 +0100
+Subject: [PATCH] init.qcom.factory
+
+Signed-off-by: Pafcholini <nadyaivanova14@gmail.com>
+---
+ p/init.qcom.factory.sh | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/p/init.qcom.factory.sh b/p/init.qcom.factory.sh
+index e127a66..be281a7 100755
+--- a/p/init.qcom.factory.sh
++++ b/p/init.qcom.factory.sh
+@@ -158,22 +158,22 @@
+     chmod -h 0660 /sys/power/wake_unlock
+ 
+     chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/timer_rate
+-    chmod -h 0660 /sys/devices/system/cpu/cpufreq/interactive/timer_rate
++    chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/timer_rate
+     chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
+-    chmod -h 0660 /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
++    chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
+     chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
+-    chmod -h 0660 /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
++    chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
+     chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
+-    chmod -h 0660 /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
++    chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
+     chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
+-    chmod -h 0660 /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
++    chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
+     chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/boost
+-    chmod -h 0660 /sys/devices/system/cpu/cpufreq/interactive/boost
++    chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/boost
+     chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/boostpulse
+     chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/input_boost
+-    chmod -h 0660 /sys/devices/system/cpu/cpufreq/interactive/input_boost
++    chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/input_boost
+     chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/boostpulse_duration
+-    chmod -h 0660 /sys/devices/system/cpu/cpufreq/interactive/boostpulse_duration
++    chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/boostpulse_duration
+ 
+     # Assume SMP uses shared cpufreq policy for all CPUs
+     chown -h system.system /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+-- 
+2.1.4
+
