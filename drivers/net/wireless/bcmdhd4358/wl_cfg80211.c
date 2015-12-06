@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfg80211.c 561870 2015-06-08 06:22:06Z $
+ * $Id: wl_cfg80211.c 572607 2015-07-20 10:40:32Z $
  */
 /* */
 #include <typedefs.h>
@@ -4271,11 +4271,15 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 			WL_DBG(("Currently not associated!\n"));
 	} else {
 		/* if status is DISCONNECTING, wait for disconnection terminated max 500 ms */
-		wait_cnt = 500/10;
+		wait_cnt = 200/10;
 		while (wl_get_drv_status(cfg, DISCONNECTING, dev) && wait_cnt) {
 			WL_DBG(("Waiting for disconnection terminated, wait_cnt: %d\n", wait_cnt));
 			wait_cnt--;
 			OSL_SLEEP(10);
+		}
+		if (wl_get_drv_status(cfg, DISCONNECTING, dev)) {
+			WL_ERR(("Force clear DISCONNECTING status!\n"));
+			wl_clr_drv_status(cfg, DISCONNECTING, dev);
 		}
 	}
 
@@ -4566,14 +4570,6 @@ wl_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
 	}
 #endif /* ESCAN_RESULT_PATCH */
 
-#ifdef CUSTOMER_HW4
-	if ((wl_get_drv_status(cfg, CONNECTING, dev) ||
-		wl_get_drv_status(cfg, CONNECTED, dev)) && act) {
-		WL_ERR(("Wait for complete of connecting \n"));
-		OSL_SLEEP(200);
-	}
-#endif /* CUSTOMER_HW4 */
-
 	if (act) {
 		/*
 		* Cancel ongoing scan to sync up with sme state machine of cfg80211.
@@ -4584,16 +4580,23 @@ wl_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
 			wl_notify_escan_complete(cfg, dev, true, true);
 		}
 #endif /* ESCAN_RESULT_PATCH */
-		wl_set_drv_status(cfg, DISCONNECTING, dev);
-		scbval.val = reason_code;
-		memcpy(&scbval.ea, curbssid, ETHER_ADDR_LEN);
-		scbval.val = htod32(scbval.val);
-		err = wldev_ioctl(dev, WLC_DISASSOC, &scbval,
-			sizeof(scb_val_t), true);
-		if (unlikely(err)) {
-			wl_clr_drv_status(cfg, DISCONNECTING, dev);
-			WL_ERR(("error (%d)\n", err));
-			return err;
+		if (wl_get_drv_status(cfg, CONNECTING, dev) ||
+			wl_get_drv_status(cfg, CONNECTED, dev)) {
+				wl_set_drv_status(cfg, DISCONNECTING, dev);
+				scbval.val = reason_code;
+				memcpy(&scbval.ea, curbssid, ETHER_ADDR_LEN);
+				scbval.val = htod32(scbval.val);
+				err = wldev_ioctl(dev, WLC_DISASSOC, &scbval,
+						sizeof(scb_val_t), true);
+				if (unlikely(err)) {
+					wl_clr_drv_status(cfg, DISCONNECTING, dev);
+					WL_ERR(("error (%d)\n", err));
+					return err;
+				}
+#ifdef CUSTOMER_HW4
+				WL_ERR(("Wait for complete of connecting \n"));
+				OSL_SLEEP(200);
+#endif /* CUSTOMER_HW4 */
 		}
 	}
 #ifdef CUSTOM_SET_CPUCORE
@@ -9379,6 +9382,11 @@ wl_notify_roaming_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 		wl_update_prof(cfg, ndev, e, &act, WL_PROF_ACT);
 		wl_update_prof(cfg, ndev, NULL, (void *)&e->addr, WL_PROF_BSSID);
 	}
+#ifdef DHD_LOSSLESS_ROAMING
+	else if ((event == WLC_E_ROAM || event == WLC_E_BSSID) && status != WLC_E_STATUS_SUCCESS) {
+		wl_del_roam_timeout(cfg);
+	}
+#endif
 	return err;
 }
 
@@ -12984,6 +12992,8 @@ static s32 __wl_cfg80211_down(struct bcm_cfg80211 *cfg)
 		cfg->wl11u = FALSE;
 	}
 #endif /* WL11U */
+
+	cfg->disable_roam_event = false;
 
 	DNGL_FUNC(dhd_cfg80211_down, (cfg));
 

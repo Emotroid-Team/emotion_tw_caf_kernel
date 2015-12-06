@@ -318,9 +318,10 @@ const struct cntry_locales_custom translate_custom_table[] = {
 #ifdef DHD_SUPPORT_FCC_US_988
 	/* Support FCC 15.407 (Part 15E) Changes, effective June 2 2014 */
 	{"US", "US", 988},
-	{"CA", "US", 988},
+	{"CA", "Q2", 993},
 #else
-	{"CA", "US", 0},
+	{"US", "US", 1},
+	{"CA", "US", 1},
 #endif
 #endif /* default ccode/regrev */
 };

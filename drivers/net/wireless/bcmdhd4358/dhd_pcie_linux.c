@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_pcie_linux.c 545664 2015-04-01 09:11:26Z $
+ * $Id: dhd_pcie_linux.c 572584 2015-07-20 08:54:22Z $
  */
 
 
@@ -283,12 +283,27 @@ int dhdpcie_pci_suspend_resume(dhd_bus_t *bus, bool state)
 	int rc;
 	struct pci_dev *dev = bus->dev;
 
+#ifdef USE_EXYNOS_PCIE_RC_PMPATCH
+	struct pci_dev *rc_pci_dev;
+#endif /* USE_EXYNOS_PCIE_RC_PMPATCH */
+
 	if (state) {
 #ifndef BCMPCIE_OOB_HOST_WAKE
 		dhdpcie_pme_active(bus->osh, state);
 #endif /* BCMPCIE_OOB_HOST_WAKE */
 		rc = dhdpcie_suspend_dev(dev);
+#ifdef USE_EXYNOS_PCIE_RC_PMPATCH
+		if (!rc) {
+			rc_pci_dev = pci_get_device(0x144d, 0xa575, NULL);
+			pci_save_state(rc_pci_dev);
+			exynos_pcie_pm_suspend(EXYNOS_PCIE_CH_NUM);
+		}
+#endif /* USE_EXYNOS_PCIE_RC_PMPATCH */
 	} else {
+#ifdef USE_EXYNOS_PCIE_RC_PMPATCH
+		exynos_pcie_pm_resume(EXYNOS_PCIE_CH_NUM);
+#endif /* USE_EXYNOS_PCIE_RC_PMPATCH */
+
 		rc = dhdpcie_resume_dev(dev);
 #ifndef BCMPCIE_OOB_HOST_WAKE
 		dhdpcie_pme_active(bus->osh, state);
