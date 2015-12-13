@@ -620,14 +620,14 @@ case "$target" in
                 echo 20000 > /sys/devices/system/cpu/cpufreq/interactive/timer_rate
                 echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/timer_slack
                 echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
-                echo 1190400 > /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
+                echo 1497600 > /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
                 echo 90 > /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
                 echo "20000" > /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
                 echo "85" > /sys/devices/system/cpu/cpufreq/interactive/target_loads
                 echo 0 > /sys/devices/system/cpu/cpufreq/interactive/sampling_down_factor
                 echo 0 > /sys/devices/system/cpu/cpufreq/interactive/bimc_hispeed_freq
-                echo 1497600 > /sys/devices/system/cpu/cpufreq/interactive/input_boost_freq
-                echo 40000 > /sys/devices/system/cpu/cpufreq/interactive/boostpulse_duration
+                echo 1728000 > /sys/devices/system/cpu/cpufreq/interactive/input_boost_freq
+                echo 4000 > /sys/devices/system/cpu/cpufreq/interactive/boostpulse_duration
                 echo 0 > /sys/devices/system/cpu/cpufreq/interactive/bk_locked
             ;;
             *)
@@ -636,7 +636,7 @@ case "$target" in
                 echo 20000 > /sys/devices/system/cpu/cpufreq/interactive/timer_rate
                 echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/timer_slack
                 echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
-                echo 1190400 > /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
+                echo 1497600 > /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
                 echo 90 > /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
                 echo "20000" > /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
                 echo "85" > /sys/devices/system/cpu/cpufreq/interactive/target_loads
@@ -677,8 +677,8 @@ case "$target" in
         # Change cpu-boost sysfs permission
         chown -h system.system /sys/module/cpu_boost/parameters/sync_threshold
         chown -h system.system /sys/module/cpu_boost/parameters/boost_ms
-        chmod -h 0660 /sys/module/cpu_boost/parameters/sync_threshold
-        chmod -h 0660 /sys/module/cpu_boost/parameters/boost_ms
+        chmod -h 0644 /sys/module/cpu_boost/parameters/sync_threshold
+        chmod -h 0644 /sys/module/cpu_boost/parameters/boost_ms
 
         # Change bimc-boost sysfs permission
         chown -h system.system /sys/module/qcom_cpufreq/parameters/boost_ms
