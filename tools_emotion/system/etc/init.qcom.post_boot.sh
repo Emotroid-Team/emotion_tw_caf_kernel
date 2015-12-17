@@ -511,15 +511,33 @@ case "$target" in
             ;;
         esac
 
-        echo 10 > /sys/module/cpu_boost/parameters/boost_ms
-        echo 0 > /sys/module/cpu_boost/parameters/input_boost_freq
-        echo 40 > /sys/module/cpu_boost/parameters/input_boost_ms
-        echo 0 > /dev/cpuctl/apps/cpu.notify_on_migrate
-
         echo "interactive" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
         echo "interactive" > /sys/devices/system/cpu/cpu1/cpufreq/scaling_governor
         echo "interactive" > /sys/devices/system/cpu/cpu2/cpufreq/scaling_governor
         echo "interactive" > /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor
+        echo "20000" > /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
+        echo 99 > /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
+        echo 1574400 > /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
+        echo 1728000 > /sys/devices/system/cpu/cpufreq/interactive/input_boost_freq
+        echo 4000 > /sys/devices/system/cpu/cpufreq/interactive/boostpulse_duration
+        echo "75" > /sys/devices/system/cpu/cpufreq/interactive/target_loads
+        echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
+        echo 1 > /sys/devices/system/cpu/cpufreq/interactive/io_is_busy
+        echo 340 > /sys/devices/system/cpu/cpufreq/interactive/multi_enter_load
+        echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/multi_enter_time
+        echo 340 > /sys/devices/system/cpu/cpufreq/interactive/multi_exit_load
+        echo 320000 > /sys/devices/system/cpu/cpufreq/interactive/multi_exit_time
+        echo 85 > /sys/devices/system/cpu/cpufreq/interactive/single_enter_load
+        echo 160000 > /sys/devices/system/cpu/cpufreq/interactive/single_enter_time
+        echo 85 > /sys/devices/system/cpu/cpufreq/interactive/single_exit_load
+        echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/single_exit_time
+
+        echo 20 > /sys/module/cpu_boost/parameters/boost_ms
+        echo 1497600 > /sys/module/cpu_boost/parameters/sync_threshold
+        echo 0 > /sys/devices/system/cpu/cpufreq/interactive/sampling_down_factor
+        echo 0 > /sys/module/cpu_boost/parameters/input_boost_freq
+        echo 40 > /sys/module/cpu_boost/parameters/input_boost_ms
+        echo 0 > /dev/cpuctl/apps/cpu.notify_on_migrate
         echo 300000 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
         echo 300000 > /sys/devices/system/cpu/cpu1/cpufreq/scaling_min_freq
         echo 300000 > /sys/devices/system/cpu/cpu2/cpufreq/scaling_min_freq
@@ -566,6 +584,7 @@ case "$target" in
         chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/up_threshold_any_cpu_freq
         chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/up_threshold_any_cpu_load
         chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/bimc_hispeed_freq
+        chown -h system.system /sys/devices/system/cpu/cpufreq/interactive/input_boost_freq
         chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/timer_rate
         chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/timer_slack
         chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
@@ -579,6 +598,7 @@ case "$target" in
         chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/io_is_busy
         chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/sampling_down_factor
         chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/bimc_hispeed_freq
+        chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/input_boost_freq
 
         # Mode Change Condition
         chmod -h 0644 /sys/devices/system/cpu/cpufreq/interactive/param_index
@@ -601,78 +621,6 @@ case "$target" in
         chown system.system /sys/devices/fe1af000.slim/es705-codec-gen0/keyword_net_path
         chown system.system /sys/devices/fe1af000.slim/es704-codec-gen0/keyword_grammar_path
         chown system.system /sys/devices/fe1af000.slim/es704-codec-gen0/keyword_net_path
-
-        #Set Mode Change Condition
-        echo 340 > /sys/devices/system/cpu/cpufreq/interactive/multi_enter_load
-        echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/multi_enter_time
-        echo 340 > /sys/devices/system/cpu/cpufreq/interactive/multi_exit_load
-        echo 320000 > /sys/devices/system/cpu/cpufreq/interactive/multi_exit_time
-        echo 85 > /sys/devices/system/cpu/cpufreq/interactive/single_enter_load
-        echo 160000 > /sys/devices/system/cpu/cpufreq/interactive/single_enter_time
-        echo 85 > /sys/devices/system/cpu/cpufreq/interactive/single_exit_load
-        echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/single_exit_time
-
-        # Default interactive governor parameters
-        case "$product_name" in
-            kc* | lentis*)
-                echo 0 > /sys/devices/system/cpu/cpufreq/interactive/param_index
-                echo 0 > /sys/devices/system/cpu/cpufreq/interactive/io_is_busy
-                echo 20000 > /sys/devices/system/cpu/cpufreq/interactive/timer_rate
-                echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/timer_slack
-                echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
-                echo 1497600 > /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
-                echo 90 > /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
-                echo "20000" > /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
-                echo "85" > /sys/devices/system/cpu/cpufreq/interactive/target_loads
-                echo 0 > /sys/devices/system/cpu/cpufreq/interactive/sampling_down_factor
-                echo 0 > /sys/devices/system/cpu/cpufreq/interactive/bimc_hispeed_freq
-                echo 1728000 > /sys/devices/system/cpu/cpufreq/interactive/input_boost_freq
-                echo 4000 > /sys/devices/system/cpu/cpufreq/interactive/boostpulse_duration
-                echo 0 > /sys/devices/system/cpu/cpufreq/interactive/bk_locked
-            ;;
-            *)
-                echo 0 > /sys/devices/system/cpu/cpufreq/interactive/param_index
-                echo 0 > /sys/devices/system/cpu/cpufreq/interactive/io_is_busy
-                echo 20000 > /sys/devices/system/cpu/cpufreq/interactive/timer_rate
-                echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/timer_slack
-                echo 80000 > /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
-                echo 1497600 > /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
-                echo 90 > /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
-                echo "20000" > /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
-                echo "85" > /sys/devices/system/cpu/cpufreq/interactive/target_loads
-                echo 0 > /sys/devices/system/cpu/cpufreq/interactive/sampling_down_factor
-                echo 0 > /sys/devices/system/cpu/cpufreq/interactive/bimc_hispeed_freq
-            ;;
-        esac
-
-        #Single Mode Parameter
-        echo 1 > /sys/devices/system/cpu/cpufreq/interactive/param_index
-        echo 20000 > /sys/devices/system/cpu/cpufreq/interactive/timer_rate
-        echo 59000 > /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
-        echo 1497600 > /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
-        echo 95 > /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
-        echo 19000 > /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
-        echo "60 800000:65 1400000:65 1700000:75" > /sys/devices/system/cpu/cpufreq/interactive/target_loads
-        echo 150000 > /sys/devices/system/cpu/cpufreq/interactive/sampling_down_factor
-        #Multi Mode Parameter
-        echo 2 > /sys/devices/system/cpu/cpufreq/interactive/param_index
-        echo 20000 > /sys/devices/system/cpu/cpufreq/interactive/timer_rate
-        echo 79000 > /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
-        echo 1728000 > /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
-        echo 90 > /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
-        echo 19000 > /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
-        echo "50 800000:60 1400000:65" > /sys/devices/system/cpu/cpufreq/interactive/target_loads
-        echo 200000 > /sys/devices/system/cpu/cpufreq/interactive/sampling_down_factor
-        #Single & Multi Mode Parameter
-        echo 3 > /sys/devices/system/cpu/cpufreq/interactive/param_index
-        echo 20000 > /sys/devices/system/cpu/cpufreq/interactive/timer_rate
-        echo 99000 > /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
-        echo 1958400 > /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
-        echo 85 > /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
-        echo 19000 > /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
-        echo "50 1400000:60" > /sys/devices/system/cpu/cpufreq/interactive/target_loads
-        echo 300000 > /sys/devices/system/cpu/cpufreq/interactive/sampling_down_factor
-        echo 0 > /sys/devices/system/cpu/cpufreq/interactive/param_index
 
         # Change cpu-boost sysfs permission
         chown -h system.system /sys/module/cpu_boost/parameters/sync_threshold
@@ -833,15 +781,15 @@ case "$target" in
     "apq8084")
         rm /data/system/perfd/default_values
         start mpdecision
-        echo 512 > /sys/block/mmcblk0/bdi/read_ahead_kb
-        echo 512 > /sys/block/sda/bdi/read_ahead_kb
-        echo 512 > /sys/block/sdb/bdi/read_ahead_kb
-        echo 512 > /sys/block/sdc/bdi/read_ahead_kb
-        echo 512 > /sys/block/sdd/bdi/read_ahead_kb
-        echo 512 > /sys/block/sde/bdi/read_ahead_kb
-        echo 512 > /sys/block/sdf/bdi/read_ahead_kb
-        echo 512 > /sys/block/sdg/bdi/read_ahead_kb
-        echo 512 > /sys/block/sdh/bdi/read_ahead_kb
+        echo 1024 > /sys/block/mmcblk0/bdi/read_ahead_kb
+        echo 1024 > /sys/block/sda/bdi/read_ahead_kb
+        echo 1024 > /sys/block/sdb/bdi/read_ahead_kb
+        echo 1024 > /sys/block/sdc/bdi/read_ahead_kb
+        echo 1024 > /sys/block/sdd/bdi/read_ahead_kb
+        echo 1024 > /sys/block/sde/bdi/read_ahead_kb
+        echo 1024 > /sys/block/sdf/bdi/read_ahead_kb
+        echo 1024 > /sys/block/sdg/bdi/read_ahead_kb
+        echo 1024 > /sys/block/sdh/bdi/read_ahead_kb
     ;;
     "msm7627a")
         if [ -f /sys/devices/soc0/soc_id ]; then
