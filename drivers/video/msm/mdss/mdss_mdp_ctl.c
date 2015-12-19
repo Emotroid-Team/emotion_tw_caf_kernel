@@ -3128,12 +3128,8 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg,
 	mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_READY);
 	ATRACE_END("frame_ready");
 
-<<<<<<< HEAD
-	if (ctl->wait_pingpong) {
-=======
 	if (!mdata->serialize_wait4pp && ctl->wait_pingpong) {
 
->>>>>>> b12e028... msm: mdss: debugfs: add support to serialize wait4pingpong
 		ATRACE_BEGIN("wait_pingpong");
 		ctl->wait_pingpong(ctl, NULL);
 
