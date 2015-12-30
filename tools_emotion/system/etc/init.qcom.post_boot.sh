@@ -627,6 +627,9 @@ case "$target" in
         chown -h system.system /sys/module/cpu_boost/parameters/boost_ms
         chmod -h 0644 /sys/module/cpu_boost/parameters/sync_threshold
         chmod -h 0644 /sys/module/cpu_boost/parameters/boost_ms
+	
+	# Memory management
+	echo "8192,16384,32768,65536,120320,131072" > /sys/module/lowmemorykiller/parameters/minfree
 
         # Change bimc-boost sysfs permission
         chown -h system.system /sys/module/qcom_cpufreq/parameters/boost_ms
