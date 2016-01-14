@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -34,12 +34,18 @@ struct cpu_sync {
 	int cpu;
 	spinlock_t lock;
 	bool pending;
-	atomic_t being_woken;
 	int src_cpu;
 	unsigned int boost_min;
 	unsigned int input_boost_min;
 	unsigned int task_load;
 };
+
+/****************************************************************/
+#ifdef CONFIG_IRLED_GPIO
+extern bool gir_boost_disable;
+#endif
+/****************************************************************/
+
 
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 static struct workqueue_struct *cpu_boost_wq;
@@ -151,6 +157,13 @@ static int boost_mig_sync_thread(void *data)
 
 	while (1) {
 		wait_event(s->sync_wq, s->pending || kthread_should_stop());
+#ifdef CONFIG_IRLED_GPIO
+		if (unlikely(gir_boost_disable)) {
+			pr_debug("[GPIO_IR][%s] continue~!(cpu:%d)\n", 
+				__func__, raw_smp_processor_id());
+			continue;
+		}
+#endif
 
 		if (kthread_should_stop())
 			break;
@@ -169,8 +182,7 @@ static int boost_mig_sync_thread(void *data)
 			continue;
 
 		req_freq = load_based_syncs ?
-			(dest_policy.cpuinfo.max_freq * s->task_load) / 100 :
-							src_policy.cur;
+			(dest_policy.max * s->task_load) / 100 : src_policy.cur;
 
 		if (req_freq <= dest_policy.cpuinfo.min_freq) {
 			pr_debug("No sync. Sync Freq:%u\n", req_freq);
@@ -217,6 +229,14 @@ static int boost_migration_notify(struct notifier_block *nb,
 	unsigned long flags;
 	struct cpu_sync *s = &per_cpu(sync_info, mnd->dest_cpu);
 
+#ifdef CONFIG_IRLED_GPIO
+	if (unlikely(gir_boost_disable)) {
+		pr_debug("[GPIO_IR][%s] continue~!(cpu:%d)\n", 
+			__func__, raw_smp_processor_id());
+		return NOTIFY_OK;
+	}
+#endif
+
 	if (load_based_syncs && (mnd->load <= migration_load_threshold))
 		return NOTIFY_OK;
 
@@ -241,16 +261,7 @@ static int boost_migration_notify(struct notifier_block *nb,
 	s->src_cpu = mnd->src_cpu;
 	s->task_load = load_based_syncs ? mnd->load : 0;
 	spin_unlock_irqrestore(&s->lock, flags);
-	/*
-	* Avoid issuing recursive wakeup call, as sync thread itself could be
-	* seen as migrating triggering this notification. Note that sync thread
-	* of a cpu could be running for a short while with its affinity broken
-	* because of CPU hotplug.
-	*/
-	if (!atomic_cmpxchg(&s->being_woken, 0, 1)) {
-		wake_up(&s->sync_wq);
-		atomic_set(&s->being_woken, 0);
-	}
+	wake_up(&s->sync_wq);
 
 	return NOTIFY_OK;
 }
@@ -292,6 +303,14 @@ static void cpuboost_input_event(struct input_handle *handle,
 
 	if (!input_boost_freq)
 		return;
+
+#ifdef CONFIG_IRLED_GPIO
+	if (unlikely(gir_boost_disable)) {
+		pr_debug("[GPIO_IR][%s] continue~!(cpu:%d)\n", 
+			__func__, raw_smp_processor_id());
+		return;
+	}
+#endif
 
 	now = ktime_to_us(ktime_get());
 	if (now - last_input_time < MIN_INPUT_INTERVAL)
@@ -392,7 +411,6 @@ static int cpu_boost_init(void)
 		s = &per_cpu(sync_info, cpu);
 		s->cpu = cpu;
 		init_waitqueue_head(&s->sync_wq);
-		atomic_set(&s->being_woken, 0);
 		spin_lock_init(&s->lock);
 		INIT_DELAYED_WORK(&s->boost_rem, do_boost_rem);
 		INIT_DELAYED_WORK(&s->input_boost_rem, do_input_boost_rem);

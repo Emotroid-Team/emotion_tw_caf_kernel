@@ -43,8 +43,6 @@ struct intf_timing_params {
 	u32 v_front_porch;
 	u32 hsync_pulse_width;
 	u32 vsync_pulse_width;
-	u32 h_polarity;
-	u32 v_polarity;
 
 	u32 border_clr;
 	u32 underflow_clr;
@@ -179,8 +177,13 @@ static int mdss_mdp_video_timegen_setup(struct mdss_mdp_ctl *ctl,
 	display_hctl = (hsync_end_x << 16) | hsync_start_x;
 
 	den_polarity = 0;
-	hsync_polarity = p->h_polarity;
-	vsync_polarity = p->v_polarity;
+	if (MDSS_INTF_HDMI == ctx->intf_type) {
+		hsync_polarity = p->yres >= 720 ? 0 : 1;
+		vsync_polarity = p->yres >= 720 ? 0 : 1;
+	} else {
+		hsync_polarity = 0;
+		vsync_polarity = 0;
+	}
 	polarity_ctl = (den_polarity << 2)   | /*  DEN Polarity  */
 		       (vsync_polarity << 1) | /* VSYNC Polarity */
 		       (hsync_polarity << 0);  /* HSYNC Polarity */
@@ -332,6 +335,7 @@ static int mdss_mdp_video_stop(struct mdss_mdp_ctl *ctl, int panel_power_state)
 
 		mdss_iommu_ctrl(0);
 		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
+		mdss_bus_bandwidth_ctrl(0);
 		ctx->timegen_en = false;
 
 		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_PANEL_OFF, NULL);
@@ -478,7 +482,7 @@ static void mdss_mdp_video_underrun_intr_done(void *arg)
 
 	ctl->underrun_cnt++;
 	MDSS_XLOG(ctl->num, ctl->underrun_cnt);
-	MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0", "dsi1", "edp", "hdmi", "panic");
+	MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0", "dsi1", "panic");
 	trace_mdp_video_underrun_done(ctl->num, ctl->underrun_cnt);
 	pr_debug("display underrun detected for ctl=%d count=%d\n", ctl->num,
 			ctl->underrun_cnt);
@@ -726,6 +730,7 @@ static int mdss_mdp_video_display(struct mdss_mdp_ctl *ctl, void *arg)
 		}
 
 		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
+		mdss_bus_bandwidth_ctrl(1);
 
 		mdss_mdp_irq_enable(MDSS_MDP_IRQ_INTF_UNDER_RUN, ctl->intf_num);
 		sctl = mdss_mdp_get_split_ctl(ctl);
@@ -772,6 +777,7 @@ int mdss_mdp_video_reconfigure_splash_done(struct mdss_mdp_ctl *ctl,
 	pdata->panel_info.cont_splash_enabled = 0;
 	if (sctl)
 		sctl->panel_data->panel_info.cont_splash_enabled = 0;
+	pdata->panel_info.panel_power_state = MDSS_PANEL_POWER_OFF;
 
 	if (!handoff) {
 		ret = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_CONT_SPLASH_BEGIN,
@@ -871,8 +877,6 @@ int mdss_mdp_video_start(struct mdss_mdp_ctl *ctl)
 	itp.hsync_pulse_width = mult_frac(pinfo->lcdc.h_pulse_width, dst_bpp,
 			pinfo->bpp);
 	itp.vsync_pulse_width = pinfo->lcdc.v_pulse_width;
-	itp.h_polarity = pinfo->lcdc.h_polarity;
-	itp.v_polarity = pinfo->lcdc.v_polarity;
 
 	if (mdss_mdp_video_timegen_setup(ctl, &itp)) {
 		pr_err("unable to get timing parameters\n");

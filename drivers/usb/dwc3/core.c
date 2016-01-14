@@ -61,6 +61,23 @@
 
 #include "debug.h"
 
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_USB30_MENU
+static void sec_reconnect_work(struct work_struct *data)
+{
+	struct dwc3 *udc = container_of(data, struct dwc3, reconnect_work);
+
+	usb_gadget_disconnect(&udc->gadget);
+	printk(KERN_ERR"usb:: Disconnected in case of Super speed support \n");
+	mdelay(1);
+	usb_gadget_connect(&udc->gadget);
+
+}
+#define WORK_INIT(udc) INIT_WORK(&udc->reconnect_work, sec_reconnect_work);
+
+#else
+#define WORK_INIT(udc)
+#endif
+
 /* -------------------------------------------------------------------------- */
 
 void dwc3_set_mode(struct dwc3 *dwc, u32 mode)
@@ -100,13 +117,6 @@ void dwc3_set_mode(struct dwc3 *dwc, u32 mode)
 			dwc3_writel(dwc->regs, DWC3_GFLADJ, reg);
 		}
 	}
-
-	reg = dwc3_readl(dwc->regs, DWC3_GUSB3PIPECTL(0));
-	reg |= DWC3_GUSB3PIPECTL_SUSPHY;
-	dwc3_writel(dwc->regs, DWC3_GUSB3PIPECTL(0), reg);
-	reg = dwc3_readl(dwc->regs, DWC3_GUSB2PHYCFG(0));
-	reg |= DWC3_GUSB2PHYCFG_SUSPHY;
-	dwc3_writel(dwc->regs, DWC3_GUSB2PHYCFG(0), reg);
 }
 
 /**
@@ -596,8 +606,6 @@ static int dwc3_probe(struct platform_device *pdev)
 
 	dwc->core_reset_after_phy_init =
 		of_property_read_bool(node, "core_reset_after_phy_init");
-	dwc->usb3_u1u2_disable = of_property_read_bool(node,
-		"snps,usb3-u1u2-disable");
 
 	dwc->needs_fifo_resize = of_property_read_bool(node, "tx-fifo-resize");
 	host_only_mode = of_property_read_bool(node, "host-only-mode");
@@ -614,6 +622,11 @@ static int dwc3_probe(struct platform_device *pdev)
 	/* default to superspeed if no maximum_speed passed */
 	if (dwc->maximum_speed == USB_SPEED_UNKNOWN)
 		dwc->maximum_speed = USB_SPEED_SUPER;
+
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_USB30_MENU
+	dwc->speed_limit = dwc->maximum_speed;
+	dwc->ss_host_avail = -1;
+#endif
 
 	if (IS_ERR(dwc->usb2_phy)) {
 		ret = PTR_ERR(dwc->usb2_phy);
@@ -755,7 +768,9 @@ static int dwc3_probe(struct platform_device *pdev)
 	}
 
 	dwc3_notify_event(dwc, DWC3_CONTROLLER_POST_INITIALIZATION_EVENT);
-
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_USB30_MENU
+	WORK_INIT(dwc);
+#endif
 	return 0;
 
 err3:

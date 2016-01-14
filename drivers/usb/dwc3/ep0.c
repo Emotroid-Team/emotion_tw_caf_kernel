@@ -36,7 +36,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
@@ -55,10 +54,6 @@
 #include "gadget.h"
 #include "io.h"
 #include "debug.h"
-
-static bool enable_dwc3_u1u2;
-module_param(enable_dwc3_u1u2, bool, S_IRUGO | S_IWUSR);
-MODULE_PARM_DESC(enable_dwc3_u1u2, "Enable support for U1U2 low power modes");
 
 static void __dwc3_ep0_do_control_status(struct dwc3 *dwc, struct dwc3_ep *dep);
 static void __dwc3_ep0_do_control_data(struct dwc3 *dwc,
@@ -399,7 +394,9 @@ static int dwc3_ep0_handle_feature(struct dwc3 *dwc,
 	u32			recip;
 	u32			wValue;
 	u32			wIndex;
+#ifndef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 	u32			reg;
+#endif
 	int			ret;
 	enum usb_device_state	state;
 
@@ -423,15 +420,15 @@ static int dwc3_ep0_handle_feature(struct dwc3 *dwc,
 				return -EINVAL;
 			if (dwc->speed != DWC3_DSTS_SUPERSPEED)
 				return -EINVAL;
-			if (dwc->usb3_u1u2_disable && !enable_dwc3_u1u2)
-				return -EINVAL;
 
+#ifndef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 			reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 			if (set)
 				reg |= DWC3_DCTL_INITU1ENA;
 			else
 				reg &= ~DWC3_DCTL_INITU1ENA;
 			dwc3_writel(dwc->regs, DWC3_DCTL, reg);
+#endif
 			break;
 
 		case USB_DEVICE_U2_ENABLE:
@@ -439,15 +436,15 @@ static int dwc3_ep0_handle_feature(struct dwc3 *dwc,
 				return -EINVAL;
 			if (dwc->speed != DWC3_DSTS_SUPERSPEED)
 				return -EINVAL;
-			if (dwc->usb3_u1u2_disable && !enable_dwc3_u1u2)
-				return -EINVAL;
 
+#ifndef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 			reg = dwc3_readl(dwc->regs, DWC3_DCTL);
 			if (set)
 				reg |= DWC3_DCTL_INITU2ENA;
 			else
 				reg &= ~DWC3_DCTL_INITU2ENA;
 			dwc3_writel(dwc->regs, DWC3_DCTL, reg);
+#endif
 			break;
 
 		case USB_DEVICE_LTM_ENABLE:
@@ -552,7 +549,9 @@ static int dwc3_ep0_set_config(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 	enum usb_device_state state = dwc->gadget.state;
 	u32 cfg;
 	int ret;
+#ifndef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 	u32 reg;
+#endif
 
 	dwc->start_config_issued = false;
 	cfg = le16_to_cpu(ctrl->wValue);
@@ -568,17 +567,15 @@ static int dwc3_ep0_set_config(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 		if (cfg && (!ret || (ret == USB_GADGET_DELAYED_STATUS))) {
 			usb_gadget_set_state(&dwc->gadget,
 					USB_STATE_CONFIGURED);
-
-			if (!dwc->usb3_u1u2_disable || enable_dwc3_u1u2) {
-				/*
-				 * Enable transition to U1/U2 state when
-				 * nothing is pending from application.
-				 */
-				reg = dwc3_readl(dwc->regs, DWC3_DCTL);
-				reg |= (DWC3_DCTL_ACCEPTU1ENA |
-						DWC3_DCTL_ACCEPTU2ENA);
-				dwc3_writel(dwc->regs, DWC3_DCTL, reg);
-			}
+#ifndef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+			/*
+			 * Enable transition to U1/U2 state when
+			 * nothing is pending from application.
+			 */
+			reg = dwc3_readl(dwc->regs, DWC3_DCTL);
+			reg |= (DWC3_DCTL_ACCEPTU1ENA | DWC3_DCTL_ACCEPTU2ENA);
+			dwc3_writel(dwc->regs, DWC3_DCTL, reg);
+#endif
 			dwc->resize_fifos = true;
 			dev_dbg(dwc->dev, "resize fifos flag SET\n");
 		}
@@ -592,6 +589,32 @@ static int dwc3_ep0_set_config(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 		break;
 	default:
 		ret = -EINVAL;
+	}
+	return ret;
+}
+
+static int dwc3_ep0_set_interface(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
+{
+	u32 alt_setting;
+	enum usb_device_state state = dwc->gadget.state;
+	int ret;
+
+	alt_setting = le16_to_cpu(ctrl->wValue);
+
+	ret = dwc3_ep0_delegate_req(dwc, ctrl);
+
+	switch (state) {
+
+	case USB_STATE_CONFIGURED:
+		/* if the alt_setting matches and the alt_setting is non zero */
+		if (alt_setting && (!ret || (ret == USB_GADGET_DELAYED_STATUS))) {
+			dwc->resize_fifos = true;
+			dev_dbg(dwc->dev, "resize fifos flag SET\n");
+		}
+		break;
+
+	default:
+		dev_err(dwc->dev, "default case\n");
 	}
 	return ret;
 }
@@ -730,6 +753,10 @@ static int dwc3_ep0_std_request(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 	case USB_REQ_SET_ISOCH_DELAY:
 		dev_vdbg(dwc->dev, "USB_REQ_SET_ISOCH_DELAY\n");
 		ret = dwc3_ep0_set_isoch_delay(dwc, ctrl);
+		break;
+	case USB_REQ_SET_INTERFACE:
+		dev_vdbg(dwc->dev, "USB_REQ_SET_INTERFACE\n");
+		ret = dwc3_ep0_set_interface(dwc, ctrl);
 		break;
 	default:
 		dev_vdbg(dwc->dev, "Forwarding to gadget driver\n");

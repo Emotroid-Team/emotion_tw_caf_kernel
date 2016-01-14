@@ -283,8 +283,10 @@ static struct neighbour *neigh_alloc(struct neigh_table *tbl, struct net_device 
 	}
 
 	n = kzalloc(tbl->entry_size + dev->neigh_priv_len, GFP_ATOMIC);
-	if (!n)
+	if (!n) {
+		printk(KERN_WARNING "kzalloc() failed.\n");
 		goto out_entries;
+	}
 
 	__skb_queue_head_init(&n->arp_queue);
 	rwlock_init(&n->lock);
@@ -468,6 +470,7 @@ struct neighbour *__neigh_create(struct neigh_table *tbl, const void *pkey,
 	struct neigh_hash_table *nht;
 
 	if (!n) {
+		printk(KERN_WARNING "neigh_alloc() failed by no buffer.\n");
 		rc = ERR_PTR(-ENOBUFS);
 		goto out;
 	}
@@ -928,7 +931,6 @@ static void neigh_timer_handler(unsigned long arg)
 			neigh->nud_state = NUD_PROBE;
 			neigh->updated = jiffies;
 			atomic_set(&neigh->probes, 0);
-			notify = 1;
 			next = now + neigh->parms->retrans_time;
 		}
 	} else {
@@ -1156,8 +1158,6 @@ int neigh_update(struct neighbour *neigh, const u8 *lladdr, u8 new,
 
 	if (new != old) {
 		neigh_del_timer(neigh);
-		if (new & NUD_PROBE)
-			atomic_set(&neigh->probes, 0);
 		if (new & NUD_IN_TIMER)
 			neigh_add_timer(neigh, (jiffies +
 						((new & NUD_REACHABLE) ?
