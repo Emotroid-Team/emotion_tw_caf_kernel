@@ -1,0 +1,26 @@
+From e53abc0e1ff98e6b4934ae1654675ccdd690ddcf Mon Sep 17 00:00:00 2001
+From: Pafcholini <nadyaivanova14@gmail.com>
+Date: Fri, 8 Apr 2016 14:38:32 +0200
+Subject: [PATCH] default.prop
+
+Signed-off-by: Pafcholini <nadyaivanova14@gmail.com>
+---
+ f/default.prop | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/f/default.prop b/f/default.prop
+index 96e3bed..db8bc09 100644
+--- a/f/default.prop
++++ b/f/default.prop
+@@ -23,6 +23,8 @@ dalvik.vm.dex2oat-Xmx=512m
+ ro.dalvik.vm.native.bridge=0
+ debug.atrace.tags.enableflags=0
+ persist.sys.usb.config=mtp,adb
++androidboot.selinux=0
++wlan.wfd.hdcp=disable
+ #
+ # BOOTIMAGE_BUILD_PROPERTIES
+ #
+-- 
+2.5.0
+

@@ -1,0 +1,36 @@
+From 39443511abc02529b39a4153d5db61771caef1f8 Mon Sep 17 00:00:00 2001
+From: Pafcholini <nadyaivanova14@gmail.com>
+Date: Fri, 8 Apr 2016 14:32:59 +0200
+Subject: [PATCH] init.rc
+
+Signed-off-by: Pafcholini <nadyaivanova14@gmail.com>
+---
+ f/init.rc | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/f/init.rc b/f/init.rc
+index 4589a3b..6c96d02 100755
+--- a/f/init.rc
++++ b/f/init.rc
+@@ -11,7 +11,7 @@ import /init.usb.configfs.rc
+ import /init.${ro.zygote}.rc
+ import /init.trace.rc
+ import /init.carrier.rc
+-import /init.container.rc
++#import /init.container.rc
+ import /init.rilcommon.rc
+ 
+ on early-init
+@@ -1867,3 +1867,9 @@ on property:service.vpnclientd.enable=1
+ on property:service.vpnclientd.enable=0
+     stop vpnclientd
+ 
++# init Emotion Kernel
++service emotioninit /sbin/emotion.sh
++    class main
++    user root
++    oneshot
++
+-- 
+2.5.0
+
